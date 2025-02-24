@@ -215,7 +215,7 @@ async def delete_address(address_id: int, db: Session = Depends(get_db)):
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=5001,
-        reload=os.getenv("FLASK_ENV") == "development",
+        host=os.getenv("BACKEND_HOST", "0.0.0.0"), # Use BACKEND_HOST env var, default to 0.0.0.0
+        port=int(os.getenv("BACKEND_PORT", 5001)), # Use BACKEND_PORT env var, default to 5001, convert to int
+        reload=os.getenv("FLASK_ENV") == "development", # Keep reload setting as is
     )
