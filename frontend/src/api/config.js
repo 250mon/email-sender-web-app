@@ -1,2 +1,4 @@
 // Create new file for API configuration
-export const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'; 
+console.log("proces.env.BACKEND_URL", process.env.BACKEND_URL);
+export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
+
