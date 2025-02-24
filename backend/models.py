@@ -1,21 +1,24 @@
 from datetime import datetime, timezone
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy.ext.declarative import declarative_base
 
-db = SQLAlchemy()
+from database import Base  # Import Base from database.py
 
-class TimestampMixin:
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(
-        db.DateTime, 
+class TimestampMixin(object):
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc)
     )
 
-class Address(db.Model, TimestampMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
+class Address(TimestampMixin, Base):
+    __tablename__ = "addresses" # Specify table name
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(120), nullable=False)
 
     def to_dict(self):
         return {
@@ -26,14 +29,16 @@ class Address(db.Model, TimestampMixin):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
-class EmailHistory(db.Model, TimestampMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    recipient_name = db.Column(db.String(100), nullable=False)
-    recipient_email = db.Column(db.String(120), nullable=False)
-    subject = db.Column(db.String(200))
-    files = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), nullable=False)
-    message = db.Column(db.Text)
+class EmailHistory(TimestampMixin, Base):
+    __tablename__ = "email_history" # Specify table name
+
+    id = Column(Integer, primary_key=True, index=True)
+    recipient_name = Column(String(100), nullable=False)
+    recipient_email = Column(String(120), nullable=False)
+    subject = Column(String(200))
+    files = Column(Text, nullable=False)
+    status = Column(String(20), nullable=False)
+    message = Column(Text)
 
     def to_dict(self):
         return {

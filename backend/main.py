@@ -15,7 +15,7 @@ from database import engine, get_db
 from dependencies import save_upload_files
 from email_sender import EmailSender
 from logger_config import setup_logger
-from models import Address, Base, EmailHistory
+from models import Address, EmailHistory # Import models, not Base from models
 from schemas import AddressCreate, EmailRequest
 
 # Load environment variables
@@ -25,7 +25,7 @@ load_dotenv()
 logger = setup_logger("app")
 
 # Create tables
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine) # Use Base from database.py
 
 app = FastAPI(title="Email Sender API")
 
