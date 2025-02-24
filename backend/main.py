@@ -8,6 +8,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 
 from config import Config
@@ -215,7 +216,13 @@ async def delete_address(address_id: int, db: Session = Depends(get_db)):
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host=os.getenv("BACKEND_HOST", "0.0.0.0"), # Use BACKEND_HOST env var, default to 0.0.0.0
-        port=int(os.getenv("BACKEND_PORT", 5001)), # Use BACKEND_PORT env var, default to 5001, convert to int
         reload=os.getenv("BACKEND_DEBUG", "false").lower() == "true", # Use BACKEND_DEBUG to control reload
+        # Use BACKEND_URL to configure host and port
+        **({
+            "host": urlparse(os.getenv("BACKEND_URL", "http://0.0.0.0:5001")).hostname,
+            "port": urlparse(os.getenv("BACKEND_URL", "http://0.0.0.0:5001")).port,
+        } if os.getenv("BACKEND_URL") else {
+            "host": "0.0.0.0", # Default host if BACKEND_URL is not set
+            "port": 5001,      # Default port if BACKEND_URL is not set
+        })
     )
