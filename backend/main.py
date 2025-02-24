@@ -11,21 +11,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from config import Config
-from database import engine, get_db
+from database import Base, engine, get_db
 from dependencies import save_upload_files
 from email_sender import EmailSender
 from logger_config import setup_logger
-from models import Address, EmailHistory # Import models, not Base from models
+from models import Address, EmailHistory  # Import models, not Base from models
 from schemas import AddressCreate, EmailRequest
 
 # Load environment variables
 load_dotenv()
 
 # Create logger
-logger = setup_logger("app")
+logger = setup_logger("main")
 
 # Create tables
-Base.metadata.create_all(bind=engine) # Use Base from database.py
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Email Sender API")
 
@@ -216,6 +216,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=5000,
+        port=5001,
         reload=os.getenv("FLASK_ENV") == "development",
     )
