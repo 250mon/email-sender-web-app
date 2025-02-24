@@ -20,9 +20,6 @@ class Config:
             return f'sqlite:///{self.BASE_DIR}/app.db'
         return db_url
 
-    SQLALCHEMY_DATABASE_URI = property(_get_database_uri)
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ECHO = os.getenv('FLASK_ENV') == 'development'
 
     # Email settings
     SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -36,5 +33,7 @@ class Config:
 
     def __init__(self):
         logger.debug("Initializing Config")
+        # Set database URI during initialization
+        self.SQLALCHEMY_DATABASE_URI = self._get_database_uri()
         # Ensure upload directory exists
-        self.UPLOAD_FOLDER.mkdir(exist_ok=True) 
+        self.UPLOAD_FOLDER.mkdir(exist_ok=True)
