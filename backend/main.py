@@ -217,5 +217,5 @@ if __name__ == "__main__":
         "main:app",
         host=os.getenv("BACKEND_HOST", "0.0.0.0"), # Use BACKEND_HOST env var, default to 0.0.0.0
         port=int(os.getenv("BACKEND_PORT", 5001)), # Use BACKEND_PORT env var, default to 5001, convert to int
-        reload=os.getenv("FLASK_ENV") == "development", # Keep reload setting as is
+        reload=os.getenv("BACKEND_DEBUG", "false").lower() == "true", # Use BACKEND_DEBUG to control reload
     )
