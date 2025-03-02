@@ -97,6 +97,7 @@ const AddressBookPage = () => {
         await axios.put(`${BACKEND_URL}/api/addresses/${editingAddress.id}`, {
           ...formData,
         });
+        setEditingAddress(null);
         showSnackbar("Address updated successfully");
       } else {
         await axios.post(`${BACKEND_URL}/api/addresses`, formData);
