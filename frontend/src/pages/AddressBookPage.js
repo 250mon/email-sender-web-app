@@ -94,9 +94,8 @@ const AddressBookPage = () => {
 
     try {
       if (editingAddress) {
-        await axios.put(`${BACKEND_URL}/api/addresses`, {
+        await axios.put(`${BACKEND_URL}/api/addresses/${editingAddress.id}`, {
           ...formData,
-          id: editingAddress.id,
         });
         showSnackbar("Address updated successfully");
       } else {
@@ -116,7 +115,7 @@ const AddressBookPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this address?")) {
       try {
-        await axios.delete(`${BACKEND_URL}/api/addresses?id=${id}`);
+        await axios.delete(`${BACKEND_URL}/api/addresses/${id}`);
         showSnackbar("Address deleted successfully");
         loadAddresses();
       } catch (error) {
@@ -231,4 +230,3 @@ const AddressBookPage = () => {
 };
 
 export default AddressBookPage;
-
