@@ -3,6 +3,13 @@ from typing import Optional, List
 from datetime import datetime
 
 class AddressBase(BaseModel):
+    status: Optional[str] = "active"  # Add this line
+```
+
+backend/main.py
+```python
+<<<<<<< SEARCH
+async def get_addresses(db: Session = Depends(get_db)):
     name: str
     email: EmailStr
 
