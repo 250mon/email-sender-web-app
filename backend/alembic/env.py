@@ -29,7 +29,7 @@ if config.config_file_name is not None:
 # Add the backend directory to sys.path to import modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from database import Base, Config  # Import Base and Config from your database module
+from db import Base, Config  # Import Base and Config from your database module
 
 target_metadata = Base.metadata  # Set metadata to your Base metadata
 
