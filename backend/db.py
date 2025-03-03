@@ -47,13 +47,12 @@ class Address(TimestampMixin, Base):
     status = Column(String(20), nullable=False, default="active")  # Add this line
 
     def to_dict(self):
-        return { 
+        return {
             "id": str(self.id),
             "name": self.name,
             "email": self.email,
             "status": self.status,  # Add this line
         }
-            "id": str(self.id),
             "name": self.name,
             "email": self.email,
             "created_at": self.created_at.isoformat() if self.created_at else None,
