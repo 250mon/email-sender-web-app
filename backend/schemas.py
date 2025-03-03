@@ -4,7 +4,6 @@ from datetime import datetime
 
 class AddressBase(BaseModel):
     status: Optional[str] = "active"  # Add this line
-```
 
 backend/main.py
 ```python
