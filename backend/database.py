@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from config import Config # Assuming config.py is in the same directory
+from config import Config  # Assuming config.py is in the same directory
 
 config = Config()
 engine = create_engine(config.SQLALCHEMY_DATABASE_URI)
