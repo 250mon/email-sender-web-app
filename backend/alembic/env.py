@@ -4,7 +4,7 @@ from logging.config import fileConfig
 
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import pool, create_engine
 
 from alembic import context
 
@@ -34,7 +34,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database import Base, engine, Config  # Import Base and Config from your database module
 from models import Address, EmailHistory  # Import your models here
 
-target_metadata = None
+target_metadata = Base.metadata # Set metadata to your Base metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
