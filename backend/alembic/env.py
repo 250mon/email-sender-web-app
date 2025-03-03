@@ -27,6 +27,13 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
+
+# Add the backend directory to sys.path to import modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from database import Base, engine, Config  # Import Base and Config from your database module
+from models import Address, EmailHistory # Import your models here
+
 target_metadata = None
 
 # other values from the config, defined by the needs of env.py,
@@ -77,7 +84,8 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
         )
 
         with context.begin_transaction():
