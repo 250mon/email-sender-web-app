@@ -13,11 +13,10 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from config import Config
-from database import Base, engine, get_db
+from db import Address, Base, EmailHistory, engine, get_db
 from dependencies import save_upload_files
 from email_sender import EmailSender
 from logger_config import setup_logger
-from models import Address, EmailHistory  # Import models, not Base from models
 from schemas import AddressCreate, EmailRequest
 
 # Load environment variables
@@ -183,9 +182,21 @@ async def get_email_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# In main.py, update the get_addresses function to filter by status
 @app.get("/api/addresses")
-async def get_addresses(db: Session = Depends(get_db)):
-    addresses = db.query(Address).all()
+async def get_addresses(db: Session = Depends(get_db), status: Optional[str] = None):
+    query = db.query(Address)
+    if status:
+        query = query.filter(Address.status == status)
+    addresses = query.all()
+    return [address.to_dict() for address in addresses]
+
+
+# In main.py, update the showConfirmation function in EmailSenderPage to filter inactive addresses
+# This is referenced in your frontend code, so we need to modify the backend endpoint
+@app.get("/api/active-addresses")
+async def get_active_addresses(db: Session = Depends(get_db)):
+    addresses = db.query(Address).filter(Address.status == "active").all()
     return [address.to_dict() for address in addresses]
 
 
@@ -225,22 +236,15 @@ async def delete_address(address_id: int, db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
+    port_str = os.getenv("BACKEND_PORT", "5000")
+    if not port_str.isdigit():
+        raise ValueError(f"Invalid port number: {port_str}")
+    port = int(port_str)
+    logger.info(f"port={port}")
+
     uvicorn.run(
         "main:app",
         reload=os.getenv("BACKEND_DEBUG", "false").lower()
         == "true",  # Use BACKEND_DEBUG to control reload
-        # Use BACKEND_URL to configure host and port
-        **(
-            {
-                "host": urlparse(
-                    os.getenv("BACKEND_URL", "http://0.0.0.0:5000")
-                ).hostname,
-                "port": urlparse(os.getenv("BACKEND_URL", "http://0.0.0.0:5000")).port,
-            }
-            if os.getenv("BACKEND_URL")
-            else {
-                "host": "0.0.0.0",  # Default host if BACKEND_URL is not set
-                "port": 5000,  # Default port if BACKEND_URL is not set
-            }
-        ),
+        port=port,
     )
