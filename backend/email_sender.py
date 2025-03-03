@@ -6,11 +6,12 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 from typing import Dict, List
+
 from logger_config import setup_logger
 
-logger = setup_logger('email_sender')
+logger = setup_logger("email_sender")
+
 
 class EmailSender:
     def __init__(self, config):
@@ -18,7 +19,9 @@ class EmailSender:
         self.port = config["port"]
         self.sender_email = config["sender_email"]
         self.password = config["password"]
-        logger.debug(f"EmailSender initialized with server: {self.smtp_server}, port: {self.port}, sender: {self.sender_email}")
+        logger.debug(
+            f"EmailSender initialized with server: {self.smtp_server}, port: {self.port}, sender: {self.sender_email}"
+        )
 
     def create_message(
         self, receiver_email: str, subject: str, body: str
@@ -88,4 +91,3 @@ class EmailSender:
                 "success": False,
                 "message": error_msg,
             }
-

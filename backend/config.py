@@ -22,18 +22,26 @@ class Config:
     # Database
     def _get_database_uri(self):
         db_url = os.getenv("DATABASE_URL")
-        if not db_url or not os.path.exists(db_url):
+        # check if database URL is set and exists
+        if not db_url or not os.path.exists(db_url.split(":///")[1]):
             logger.warning(
-                f"Database URL not found or invalid: {db_url}. Using default SQLite database({self.BASE_DIR}/app.db)."
+                f"Database URL not found or invalid: {db_url}. Using default SQLite database({self.BASE_DIR}/email.db)."
             )
-            return f"sqlite:///{self.BASE_DIR}/app.db"
+            return f"sqlite:///{self.BASE_DIR}/email.db"
         return db_url
 
     # Email settings
-    SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_SERVER = os.getenv("SMTP_SERVER")
     SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
     SENDER_EMAIL = os.getenv("SMTP_EMAIL")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+
+    if not SENDER_EMAIL:
+        logger.error("SMTP_EMAIL is not set in environment variables.")
+    if not SMTP_PASSWORD:
+        logger.error("SMTP_PASSWORD is not set in environment variables.")
+    if not SMTP_SERVER:
+        logger.warning("SMTP_SERVER is not set, using default smtp.gmail.com.")
 
     # File upload
     UPLOAD_FOLDER = BASE_DIR / "uploads"

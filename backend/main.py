@@ -3,12 +3,13 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urlparse
 
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from urllib.parse import urlparse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from config import Config
@@ -29,15 +30,25 @@ logger = setup_logger("main")
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Email Sender API")
-
 # CORS middleware
+allowed_origins = os.getenv("ALLOWED_ORIGIN_URLS", "http://localhost:3000").split(",")
+# Check the integrity of the URLs
+for origin in allowed_origins:
+    if origin.strip().lower() == "all":
+        allowed_origins = ["*"]
+        break
+    result = urlparse(origin)
+    if not all([result.scheme, result.netloc]):
+        raise ValueError(f"Invalid URL in ALLOWED_ORIGIN_URLS: {origin}")
+logger.info(f"Allowed origins: {allowed_origins}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Configure paths
 config = Config()
@@ -146,7 +157,7 @@ async def get_email_history(
 
         if recipient:
             query = query.filter(
-                db.or_(
+                or_(
                     EmailHistory.recipient_name.ilike(f"%{recipient}%"),
                     EmailHistory.recipient_email.ilike(f"%{recipient}%"),
                 )
@@ -216,13 +227,20 @@ async def delete_address(address_id: int, db: Session = Depends(get_db)):
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        reload=os.getenv("BACKEND_DEBUG", "false").lower() == "true", # Use BACKEND_DEBUG to control reload
+        reload=os.getenv("BACKEND_DEBUG", "false").lower()
+        == "true",  # Use BACKEND_DEBUG to control reload
         # Use BACKEND_URL to configure host and port
-        **({
-            "host": urlparse(os.getenv("BACKEND_URL", "http://0.0.0.0:5001")).hostname,
-            "port": urlparse(os.getenv("BACKEND_URL", "http://0.0.0.0:5001")).port,
-        } if os.getenv("BACKEND_URL") else {
-            "host": "0.0.0.0", # Default host if BACKEND_URL is not set
-            "port": 5001,      # Default port if BACKEND_URL is not set
-        })
+        **(
+            {
+                "host": urlparse(
+                    os.getenv("BACKEND_URL", "http://0.0.0.0:5000")
+                ).hostname,
+                "port": urlparse(os.getenv("BACKEND_URL", "http://0.0.0.0:5000")).port,
+            }
+            if os.getenv("BACKEND_URL")
+            else {
+                "host": "0.0.0.0",  # Default host if BACKEND_URL is not set
+                "port": 5000,  # Default port if BACKEND_URL is not set
+            }
+        ),
     )
