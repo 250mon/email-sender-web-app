@@ -1,9 +1,7 @@
-import os
-from pathlib import Path
-from alembic.config import Config as AlembicConfig
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 from config import Config  # Assuming config.py is in the same directory
 
 config = Config()

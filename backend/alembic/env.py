@@ -3,11 +3,9 @@ import sys
 from logging.config import fileConfig
 
 from dotenv import load_dotenv
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool, create_engine
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-
 
 load_dotenv()
 
@@ -29,12 +27,11 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 # Add the backend directory to sys.path to import modules
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from database import Base, engine, Config  # Import Base and Config from your database module
-from models import Address, EmailHistory  # Import your models here
+from database import Base, Config  # Import Base and Config from your database module
 
-target_metadata = Base.metadata # Set metadata to your Base metadata
+target_metadata = Base.metadata  # Set metadata to your Base metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -42,7 +39,9 @@ target_metadata = Base.metadata # Set metadata to your Base metadata
 # ... etc.
 
 config_instance = Config()  # Initialize your Config class
-config.set_main_option('sqlalchemy.url', config_instance.SQLALCHEMY_DATABASE_URI)  # Dynamically set SQLAlchemy URL
+config.set_main_option(
+    "sqlalchemy.url", config_instance.SQLALCHEMY_DATABASE_URI
+)  # Dynamically set SQLAlchemy URL
 
 
 def run_migrations_offline() -> None:
@@ -59,7 +58,7 @@ def run_migrations_offline() -> None:
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url, # Use dynamically configured URL
+        url=url,  # Use dynamically configured URL
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
