@@ -32,7 +32,7 @@ if config.config_file_name is not None:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database import Base, engine, Config  # Import Base and Config from your database module
-from models import Address, EmailHistory # Import your models here
+from models import Address, EmailHistory  # Import your models here
 
 target_metadata = None
 
@@ -41,8 +41,8 @@ target_metadata = None
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-config_instance = Config() # Initialize your Config class
-config.set_main_option('sqlalchemy.url', config_instance.SQLALCHEMY_DATABASE_URI) # Dynamically set SQLAlchemy URL
+config_instance = Config()  # Initialize your Config class
+config.set_main_option('sqlalchemy.url', config_instance.SQLALCHEMY_DATABASE_URI)  # Dynamically set SQLAlchemy URL
 
 
 def run_migrations_offline() -> None:
