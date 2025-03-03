@@ -1,28 +1,4 @@
-from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
-from config import Config
-
-# Initialize database connection
-config = Config()
-engine = create_engine(config.SQLALCHEMY_DATABASE_URI)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# Dependency for FastAPI
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Models
-class TimestampMixin(object):
-    created_at = Column(
-        DateTime(timezone=True),
+# This file is no longer needed. It will be removed.
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
