@@ -19,10 +19,15 @@ import {
   Box,
   Alert,
   Snackbar,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import FilterListIcon from '@mui/icons-material/FilterList';
 import axios from "axios";
 import { BACKEND_URL } from "../api/config";
 
@@ -33,6 +38,7 @@ const AddressBookPage = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    status: "active",
   });
   const [errors, setErrors] = useState({});
   const [snackbar, setSnackbar] = useState({
@@ -40,15 +46,32 @@ const AddressBookPage = () => {
     message: "",
     severity: "success",
   });
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
 
   const loadAddresses = useCallback(async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/addresses`);
+      const response = await axios.get(`${BACKEND_URL}/api/addresses`, {
+        params: {
+          status: showActiveOnly ? 'active' : undefined
+        }
+      });
       setAddresses(response.data);
     } catch (error) {
-      showSnackbar("Error loading addresses", "error");
+      console.error('Failed to load addresses:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: `${BACKEND_URL}/api/addresses`,
+        params: { status: showActiveOnly ? 'active' : undefined },
+        stack: error.stack
+      });
+      if (error.message === 'Network Error') {
+        showSnackbar("Failed to load resource: Could not connect to the server.", "error");
+      } else {
+        showSnackbar("Error loading addresses", "error");
+      }
     }
-  }, []);
+  }, [showActiveOnly]);
 
   useEffect(() => {
     loadAddresses();
@@ -71,7 +94,7 @@ const AddressBookPage = () => {
       setFormData(address);
       setEditingAddress(address);
     } else {
-      setFormData({ name: "", email: "" });
+      setFormData({ name: "", email: "", status: "active" });
       setEditingAddress(null);
     }
     setErrors({});
@@ -81,7 +104,7 @@ const AddressBookPage = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingAddress(null);
-    setFormData({ name: "", email: "" });
+    setFormData({ name: "", email: "", status: "active" });
     setErrors({});
   };
 
@@ -125,6 +148,10 @@ const AddressBookPage = () => {
     }
   };
 
+  const handleToggleFilter = () => {
+    setShowActiveOnly(!showActiveOnly);
+  };
+
   return (
     <Container maxWidth="md">
       <Box sx={{ my: 4 }}>
@@ -137,13 +164,23 @@ const AddressBookPage = () => {
           }}
         >
           <Typography variant="h4">Address Book</Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Add New Address
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FilterListIcon />}
+              onClick={handleToggleFilter}
+              sx={{ height: 'fit-content' }}
+            >
+              {showActiveOnly ? "Show All" : "Show Active Only"}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+            >
+              Add New Address
+            </Button>
+          </Box>
         </Box>
 
         <TableContainer component={Paper}>
@@ -152,6 +189,7 @@ const AddressBookPage = () => {
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -160,6 +198,18 @@ const AddressBookPage = () => {
                 <TableRow key={address.id}>
                   <TableCell>{address.name}</TableCell>
                   <TableCell>{address.email}</TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        textTransform: 'capitalize',
+                        color: address.status === 'active' ? 'success.main' : 'text.secondary',
+                        fontSize: 'inherit',
+                      }}
+                    >
+                      {address.status}
+                    </Typography>
+                  </TableCell>
                   <TableCell align="right">
                     <IconButton onClick={() => handleOpenDialog(address)}>
                       <EditIcon />
@@ -203,6 +253,27 @@ const AddressBookPage = () => {
               error={!!errors.email}
               helperText={errors.email}
             />
+            <FormControl component="fieldset" sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Status
+              </Typography>
+              <RadioGroup
+                row
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              >
+                <FormControlLabel 
+                  value="active" 
+                  control={<Radio />} 
+                  label="Active" 
+                />
+                <FormControlLabel 
+                  value="inactive" 
+                  control={<Radio />} 
+                  label="Inactive" 
+                />
+              </RadioGroup>
+            </FormControl>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>

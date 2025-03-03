@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Response, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -78,6 +78,17 @@ async def upload_files(files: List[UploadFile] = File(...)):
 async def send_email(email_request: EmailRequest, db: Session = Depends(get_db)):
     logger.info("Starting email send process...")
     try:
+        # Check if recipient is active
+        recipient = db.query(Address).filter(
+            Address.email == email_request.receiver_email
+        ).first()
+        
+        if recipient and recipient.status == "inactive":
+            return {
+                "success": False,
+                "message": f"Email not sent: {email_request.receiver_email} is marked as inactive"
+            }
+
         # Log request data (excluding sensitive info)
         logger.debug(f"Received email request for: {email_request.receiver_email}")
 
@@ -202,6 +213,9 @@ async def get_active_addresses(db: Session = Depends(get_db)):
 
 @app.post("/api/addresses")
 async def create_address(address: AddressCreate, db: Session = Depends(get_db)):
+    # Ensure status is set to 'active' if not provided
+    if not hasattr(address, 'status'):
+        address.status = 'active'
     db_address = Address(**address.model_dump())
     db.add(db_address)
     db.commit()
@@ -210,14 +224,17 @@ async def create_address(address: AddressCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/addresses/{address_id}")
-async def update_address(
-    address_id: int, address: AddressCreate, db: Session = Depends(get_db)
-):
+async def update_address(address_id: int, address: AddressCreate, db: Session = Depends(get_db)):
     db_address = db.query(Address).filter(Address.id == address_id).first()
     if not db_address:
         raise HTTPException(status_code=404, detail="Address not found")
 
-    for key, value in address.model_dump().items():
+    # Ensure status is included in the update
+    update_data = address.model_dump()
+    if 'status' not in update_data:
+        update_data['status'] = 'active'
+
+    for key, value in update_data.items():
         setattr(db_address, key, value)
 
     db.commit()
@@ -233,6 +250,27 @@ async def delete_address(address_id: int, db: Session = Depends(get_db)):
     db.delete(db_address)
     db.commit()
     return {"success": True}
+
+
+# Example of setting a cookie
+@app.post("/api/set-cookie")
+async def set_cookie(response: Response):
+    response.set_cookie(
+        key="session_id",
+        value="some_value",
+        max_age=3600,  # 1 hour
+        httponly=True,  # Prevents JavaScript access
+        secure=True,   # Only sent over HTTPS
+        samesite="lax" # CSRF protection
+    )
+    return {"message": "Cookie set"}
+
+# Example of reading a cookie
+@app.get("/api/get-cookie")
+async def get_cookie(session_id: Optional[str] = Cookie(None)):
+    if not session_id:
+        return {"message": "No cookie found"}
+    return {"session_id": session_id}
 
 
 if __name__ == "__main__":

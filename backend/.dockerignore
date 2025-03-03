@@ -29,3 +29,6 @@ tmp/
 
 # Exclude Dockerfile artifacts if you have multiple Dockerfiles
 Dockerfile*
+
+# db files
+*.db

@@ -15,6 +15,7 @@ logger = setup_logger("config")
 class Config:
     # Base directory for all file paths
     BASE_DIR = Path(__file__).parent
+    DB_DIR = BASE_DIR / "db"
 
     # Security
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-key-please-change")
@@ -24,10 +25,11 @@ class Config:
         db_url = os.getenv("DATABASE_URL")
         # check if database URL is set and exists
         if not db_url or not os.path.exists(db_url.split(":///")[1]):
+            self.DB_DIR.mkdir(exist_ok=True)
             logger.warning(
-                f"Database URL not found or invalid: {db_url}. Using default SQLite database({self.BASE_DIR}/email.db)."
+                f"Database URL not found or invalid: {db_url}. Using default SQLite database({self.DB_DIR}/email.db)."
             )
-            return f"sqlite:///{self.BASE_DIR}/email.db"
+            return f"sqlite:///{self.DB_DIR}/email.db"
         return db_url
 
     # Email settings

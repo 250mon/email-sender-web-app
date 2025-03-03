@@ -9,7 +9,7 @@ services:
     ports:
       - "${BACKEND_PORT}:8000"
     volumes:
-      - ./backend:/backend
+      - ./db:/backend/db
     environment:
       # For CORS
       ALLOWED_ORIGIN_URLS: http://localhost:${FRONTEND_PORT}, all
@@ -23,7 +23,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_BACKEND_URL: "http://localhost:${BACKEND_PORT}"
+        REACT_APP_BACKEND_URL: "http://127.0.0.1:${BACKEND_PORT}"
     restart: always # or "unless-stopped" for production
     ports:
       # For nginx

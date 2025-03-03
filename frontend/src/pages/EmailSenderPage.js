@@ -126,7 +126,7 @@ function EmailSenderPage() {
       // Fetch recipients only on initial call
       let remainingRecipients = recipients;
       if (!remainingRecipients) {
-        const response = await axios.get(`${BACKEND_URL}/api/addresses`);
+        const response = await axios.get(`${BACKEND_URL}/api/active-addresses`);
         remainingRecipients = response.data;
 
         // Initialize status for all recipients

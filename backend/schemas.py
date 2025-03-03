@@ -1,19 +1,18 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr
+
 
 class AddressBase(BaseModel):
-    status: Optional[str] = "active"  # Add this line
-
-backend/main.py
-```python
-<<<<<<< SEARCH
-async def get_addresses(db: Session = Depends(get_db)):
     name: str
     email: EmailStr
+    status: Optional[str] = "active"  # Add this line
+
 
 class AddressCreate(AddressBase):
     pass
+
 
 class Address(AddressBase):
     id: int
@@ -23,12 +22,14 @@ class Address(AddressBase):
     class Config:
         from_attributes = True
 
+
 class EmailRequest(BaseModel):
     receiver_email: EmailStr
     subject: str
     body: str
     recipient_name: Optional[str] = ""
     files: Optional[List[dict]] = []
+
 
 class EmailResponse(BaseModel):
     success: bool
