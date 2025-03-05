@@ -9,7 +9,8 @@ services:
     ports:
       - "${BACKEND_PORT}:8000"
     volumes:
-      - ./db:/backend/db
+      - ./backend/db:/backend_app/db
+      - ./backend/uploads:/backend_app/uploads
     environment:
       # For CORS
       ALLOWED_ORIGIN_URLS: http://localhost:${FRONTEND_PORT}, all
@@ -32,7 +33,6 @@ services:
       - ./frontend:/frontend
     depends_on:
       - backend
-
     # Optionally, you can also set the runtime environment, but it won't affect the built code:
     # environment:
     #   REACT_APP_BACKEND_URL: http://localhost:${BACKEND_PORT}

@@ -4,9 +4,11 @@ import { AppBar, Toolbar, Typography, Button, Container } from "@mui/material";
 import EmailSenderPage from "./pages/EmailSenderPage";
 import AddressBookPage from "./pages/AddressBookPage";
 import EmailHistoryPage from "./pages/EmailHistoryPage";
+import FilesManagerPage from "./pages/FilesManagerPage";
 import HistoryIcon from "@mui/icons-material/History";
 import SendIcon from "@mui/icons-material/Send";
 import ContactsIcon from "@mui/icons-material/Contacts";
+import FolderIcon from "@mui/icons-material/Folder";
 
 function App() {
   return (
@@ -23,6 +25,14 @@ function App() {
             startIcon={<SendIcon />}
           >
             Send Emails
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            to="/files"
+            startIcon={<FolderIcon />}
+          >
+            Files
           </Button>
           <Button
             color="inherit"
@@ -46,6 +56,7 @@ function App() {
       <Container>
         <Routes>
           <Route path="/" element={<EmailSenderPage />} />
+          <Route path="/files" element={<FilesManagerPage />} />
           <Route path="/address-book" element={<AddressBookPage />} />
           <Route path="/history" element={<EmailHistoryPage />} />
         </Routes>

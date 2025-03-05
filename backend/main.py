@@ -4,6 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlparse
+import glob
+import uuid
 
 import uvicorn
 from dotenv import load_dotenv
@@ -11,6 +13,7 @@ from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Response,
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from fastapi.responses import JSONResponse
 
 from config import Config
 from db import Address, Base, EmailHistory, engine, get_db
@@ -65,12 +68,39 @@ def health_check():
 
 @app.post("/api/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
-    logger.info("Handling file upload request")
+    """Upload multiple files and return their paths"""
+    file_paths = []
     try:
-        uploaded_files = await save_upload_files(files, UPLOAD_FOLDER)
-        return {"message": "Files uploaded successfully", "files": uploaded_files}
+        for file in files:
+            # Ensure filename is properly preserved with Unicode characters
+            # Replace potentially problematic characters in filename
+            safe_filename = "".join(
+                c for c in file.filename if c.isalnum() or c in "._- "
+            )
+            
+            # If filename became empty after cleaning, use a default name
+            if not safe_filename:
+                safe_filename = f"file_{uuid.uuid4().hex[:8]}"
+                
+            file_path = os.path.join(UPLOAD_FOLDER, safe_filename)
+            
+            # Avoid overwriting existing files with same name
+            counter = 1
+            original_file_path = file_path
+            while os.path.exists(file_path):
+                name, ext = os.path.splitext(original_file_path)
+                file_path = f"{name}_{counter}{ext}"
+                counter += 1
+                
+            # Save the file
+            with open(file_path, "wb") as f:
+                f.write(await file.read())
+                
+            file_paths.append({"name": safe_filename, "path": file_path})
+        
+        return {"files": file_paths}
     except Exception as e:
-        logger.error(f"Upload failed: {str(e)}", exc_info=True)
+        logger.error(f"Error uploading files: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -271,6 +301,50 @@ async def get_cookie(session_id: Optional[str] = Cookie(None)):
     if not session_id:
         return {"message": "No cookie found"}
     return {"session_id": session_id}
+
+
+@app.get("/api/files")
+async def list_files():
+    """List all files in the upload directory"""
+    try:
+        files = []
+        for file_path in glob.glob(f"{UPLOAD_FOLDER}/*"):
+            # Ensure the file name is properly decoded for display
+            file_name = os.path.basename(file_path)
+            file_info = {
+                "name": file_name,
+                "path": file_path,
+                "size": os.path.getsize(file_path),
+                "created": datetime.fromtimestamp(os.path.getctime(file_path)).isoformat()
+            }
+            files.append(file_info)
+        return {"files": files}
+    except Exception as e:
+        logger.error(f"Error listing files: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/files")
+async def delete_files(file_paths: List[str] = None):
+    """Delete specified files or all files if none specified"""
+    try:
+        if not file_paths:
+            # Delete all files
+            for file_path in glob.glob(f"{UPLOAD_FOLDER}/*"):
+                os.remove(file_path)
+                logger.debug(f"Deleted file: {file_path}")
+            return {"message": "All files deleted successfully"}
+        else:
+            # Delete specified files
+            for file_path in file_paths:
+                if os.path.exists(file_path) and os.path.dirname(file_path) == str(UPLOAD_FOLDER):
+                    os.remove(file_path)
+                    logger.debug(f"Deleted file: {file_path}")
+                else:
+                    logger.warning(f"File not found or outside upload directory: {file_path}")
+            return {"message": f"{len(file_paths)} files deleted successfully"}
+    except Exception as e:
+        logger.error(f"Error deleting files: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

@@ -22,15 +22,16 @@ class Config:
 
     # Database
     def _get_database_uri(self):
-        db_url = os.getenv("DATABASE_URL")
-        # check if database URL is set and exists
-        if not db_url or not os.path.exists(db_url.split(":///")[1]):
-            self.DB_DIR.mkdir(exist_ok=True)
-            logger.warning(
-                f"Database URL not found or invalid: {db_url}. Using default SQLite database({self.DB_DIR}/email.db)."
-            )
-            return f"sqlite:///{self.DB_DIR}/email.db"
-        return db_url
+        db_file_name = os.getenv("DATABASE_FILE_NAME", "email.db")
+        # The database will be in the /app/db directory in the container
+        db_path = self.DB_DIR / db_file_name
+        if not db_path.exists():
+            logger.warning(f"Database file {db_path} does not exist. Creating it.")
+            db_path.touch()
+        # Log the database path
+        logger.info(f"Using database at: {db_path}")
+        # Return the SQLite connection string
+        return f"sqlite:///{db_path}"
 
     # Email settings
     SMTP_SERVER = os.getenv("SMTP_SERVER")

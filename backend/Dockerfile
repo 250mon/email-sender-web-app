@@ -6,17 +6,17 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Set working directory
-WORKDIR /app
+WORKDIR /backend_app
 
 # Install dependencies
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+COPY requirements.txt /backend_app/
+RUN pip install --upgrade pip && pip install -r /backend_app/requirements.txt
 
 # Add Python executable path to PATH
 ENV PATH="/usr/local/bin:${PATH}"
 
 # Copy the rest of the application code
-COPY . /app/
+COPY . /backend_app/
 
 # Expose the port FastAPI will run on
 EXPOSE 8000

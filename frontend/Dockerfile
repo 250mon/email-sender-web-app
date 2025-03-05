@@ -2,7 +2,7 @@
 FROM node:20-alpine as build
 
 # Set working directory
-WORKDIR /frontend
+WORKDIR /frontend_app
 
 # Copy dependency definitions
 COPY package.json package-lock.json ./
@@ -22,7 +22,7 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 # Copy the build output from the previous stage to Nginx's html folder
-COPY --from=build /frontend/build /usr/share/nginx/html
+COPY --from=build /frontend_app/build /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80

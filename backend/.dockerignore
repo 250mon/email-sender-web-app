@@ -31,4 +31,5 @@ tmp/
 Dockerfile*
 
 # db files
-*.db
+db/
+uploads/

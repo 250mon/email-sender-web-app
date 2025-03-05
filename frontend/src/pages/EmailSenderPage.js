@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -84,6 +84,32 @@ function EmailSenderPage() {
     remainingRecipients: [],
     skipConfirmation: false,
   });
+
+  useEffect(() => {
+    const reloadFiles = localStorage.getItem('reloadFiles');
+    if (reloadFiles) {
+      try {
+        const filesToLoad = JSON.parse(reloadFiles);
+        if (filesToLoad && filesToLoad.length > 0) {
+          // Convert file objects to format expected by FileUpload component
+          const formattedFiles = filesToLoad.map(file => ({
+            name: decodeURIComponent(file.name), // Ensure proper Unicode decoding
+            path: file.path,
+            size: file.size,
+          }));
+          
+          setUploadedFiles(formattedFiles);
+          setStatus([]);
+          setError(null);
+          
+          // Clear localStorage after loading
+          localStorage.removeItem('reloadFiles');
+        }
+      } catch (error) {
+        console.error('Error loading files from storage:', error);
+      }
+    }
+  }, []);
 
   /**
    * Handles the file upload event
