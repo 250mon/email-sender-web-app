@@ -1,19 +1,19 @@
+import glob
 import json
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlparse
-import glob
-import uuid
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, Response, Cookie
+from fastapi import Cookie, Depends, FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponse
 
 from config import Config
 from db import Address, Base, EmailHistory, engine, get_db
@@ -32,20 +32,25 @@ logger = setup_logger("main")
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Email Sender API")
+
 # CORS middleware
-allowed_origins = os.getenv("ALLOWED_ORIGIN_URLS", "http://localhost:3000").split(",")
-# Check the integrity of the URLs
-for origin in allowed_origins:
-    if origin.strip().lower() == "all":
-        allowed_origins = ["*"]
-        break
-    result = urlparse(origin)
-    if not all([result.scheme, result.netloc]):
-        raise ValueError(f"Invalid URL in ALLOWED_ORIGIN_URLS: {origin}")
-logger.info(f"Allowed origins: {allowed_origins}")
+# Read and process the allowed origins
+raw_origins = os.getenv("ALLOWED_ORIGIN_URLS", "")
+# Split by comma and strip whitespace
+origins = [origin.strip() for origin in raw_origins.split(",")]
+
+# If "all" is in the list, allow all origins
+if "all" in origins:
+    origins = ["*"]
+else:
+    for origin in origins:
+        result = urlparse(origin)
+        if not all([result.scheme, result.netloc]):
+            raise ValueError(f"Invalid URL in ALLOWED_ORIGIN_URLS: {origin}")
+logger.info(f"Allowed origins: {origins}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,13 +82,13 @@ async def upload_files(files: List[UploadFile] = File(...)):
             safe_filename = "".join(
                 c for c in file.filename if c.isalnum() or c in "._- "
             )
-            
+
             # If filename became empty after cleaning, use a default name
             if not safe_filename:
                 safe_filename = f"file_{uuid.uuid4().hex[:8]}"
-                
+
             file_path = os.path.join(UPLOAD_FOLDER, safe_filename)
-            
+
             # Avoid overwriting existing files with same name
             counter = 1
             original_file_path = file_path
@@ -91,13 +96,13 @@ async def upload_files(files: List[UploadFile] = File(...)):
                 name, ext = os.path.splitext(original_file_path)
                 file_path = f"{name}_{counter}{ext}"
                 counter += 1
-                
+
             # Save the file
             with open(file_path, "wb") as f:
                 f.write(await file.read())
-                
+
             file_paths.append({"name": safe_filename, "path": file_path})
-        
+
         return {"files": file_paths}
     except Exception as e:
         logger.error(f"Error uploading files: {str(e)}", exc_info=True)
@@ -109,14 +114,16 @@ async def send_email(email_request: EmailRequest, db: Session = Depends(get_db))
     logger.info("Starting email send process...")
     try:
         # Check if recipient is active
-        recipient = db.query(Address).filter(
-            Address.email == email_request.receiver_email
-        ).first()
-        
+        recipient = (
+            db.query(Address)
+            .filter(Address.email == email_request.receiver_email)
+            .first()
+        )
+
         if recipient and recipient.status == "inactive":
             return {
                 "success": False,
-                "message": f"Email not sent: {email_request.receiver_email} is marked as inactive"
+                "message": f"Email not sent: {email_request.receiver_email} is marked as inactive",
             }
 
         # Log request data (excluding sensitive info)
@@ -244,8 +251,8 @@ async def get_active_addresses(db: Session = Depends(get_db)):
 @app.post("/api/addresses")
 async def create_address(address: AddressCreate, db: Session = Depends(get_db)):
     # Ensure status is set to 'active' if not provided
-    if not hasattr(address, 'status'):
-        address.status = 'active'
+    if not hasattr(address, "status"):
+        address.status = "active"
     db_address = Address(**address.model_dump())
     db.add(db_address)
     db.commit()
@@ -254,15 +261,17 @@ async def create_address(address: AddressCreate, db: Session = Depends(get_db)):
 
 
 @app.put("/api/addresses/{address_id}")
-async def update_address(address_id: int, address: AddressCreate, db: Session = Depends(get_db)):
+async def update_address(
+    address_id: int, address: AddressCreate, db: Session = Depends(get_db)
+):
     db_address = db.query(Address).filter(Address.id == address_id).first()
     if not db_address:
         raise HTTPException(status_code=404, detail="Address not found")
 
     # Ensure status is included in the update
     update_data = address.model_dump()
-    if 'status' not in update_data:
-        update_data['status'] = 'active'
+    if "status" not in update_data:
+        update_data["status"] = "active"
 
     for key, value in update_data.items():
         setattr(db_address, key, value)
@@ -290,10 +299,11 @@ async def set_cookie(response: Response):
         value="some_value",
         max_age=3600,  # 1 hour
         httponly=True,  # Prevents JavaScript access
-        secure=True,   # Only sent over HTTPS
-        samesite="lax" # CSRF protection
+        secure=True,  # Only sent over HTTPS
+        samesite="lax",  # CSRF protection
     )
     return {"message": "Cookie set"}
+
 
 # Example of reading a cookie
 @app.get("/api/get-cookie")
@@ -315,13 +325,16 @@ async def list_files():
                 "name": file_name,
                 "path": file_path,
                 "size": os.path.getsize(file_path),
-                "created": datetime.fromtimestamp(os.path.getctime(file_path)).isoformat()
+                "created": datetime.fromtimestamp(
+                    os.path.getctime(file_path)
+                ).isoformat(),
             }
             files.append(file_info)
         return {"files": files}
     except Exception as e:
         logger.error(f"Error listing files: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/api/files")
 async def delete_files(file_paths: List[str] = None):
@@ -336,11 +349,15 @@ async def delete_files(file_paths: List[str] = None):
         else:
             # Delete specified files
             for file_path in file_paths:
-                if os.path.exists(file_path) and os.path.dirname(file_path) == str(UPLOAD_FOLDER):
+                if os.path.exists(file_path) and os.path.dirname(file_path) == str(
+                    UPLOAD_FOLDER
+                ):
                     os.remove(file_path)
                     logger.debug(f"Deleted file: {file_path}")
                 else:
-                    logger.warning(f"File not found or outside upload directory: {file_path}")
+                    logger.warning(
+                        f"File not found or outside upload directory: {file_path}"
+                    )
             return {"message": f"{len(file_paths)} files deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting files: {str(e)}", exc_info=True)

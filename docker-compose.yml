@@ -13,7 +13,7 @@ services:
       - ./backend/uploads:/backend_app/uploads
     environment:
       # For CORS
-      ALLOWED_ORIGIN_URLS: http://localhost:${FRONTEND_PORT}, all
+      ALLOWED_ORIGIN_URLS: all,http://danaulns.iptime.org:${FRONTEND_PORT}
     env_file:
       - ./backend/.env
 
