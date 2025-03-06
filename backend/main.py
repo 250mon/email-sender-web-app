@@ -14,6 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from config import Config
 from db import Address, Base, EmailHistory, engine, get_db
@@ -48,6 +50,42 @@ else:
         if not all([result.scheme, result.netloc]):
             raise ValueError(f"Invalid URL in ALLOWED_ORIGIN_URLS: {origin}")
 logger.info(f"Allowed origins: {origins}")
+
+# Add a new CORS logging middleware
+class CORSLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Log request headers related to CORS
+        if request.url.path == "/api/addresses":
+            logger.info("=== CORS Request Details ===")
+            logger.info(f"Request path: {request.url.path}")
+            logger.info(f"Request method: {request.method}")
+            logger.info(f"Origin: {request.headers.get('origin', 'No origin header')}")
+            logger.info(f"Access-Control-Request-Method: {request.headers.get('access-control-request-method', 'No ACRM header')}")
+            logger.info(f"Access-Control-Request-Headers: {request.headers.get('access-control-request-headers', 'No ACRH header')}")
+            logger.info("=== End CORS Request Details ===")
+
+        response = await call_next(request)
+
+        # Log response headers related to CORS
+        if request.url.path == "/api/addresses":
+            logger.info("=== CORS Response Details ===")
+            logger.info(f"Access-Control-Allow-Origin: {response.headers.get('access-control-allow-origin', 'No ACAO header')}")
+            logger.info(f"Access-Control-Allow-Methods: {response.headers.get('access-control-allow-methods', 'No ACAM header')}")
+            logger.info(f"Access-Control-Allow-Headers: {response.headers.get('access-control-allow-headers', 'No ACAH header')}")
+            logger.info("=== End CORS Response Details ===")
+
+        return response
+
+# Add the CORS logging middleware before the CORS middleware
+app.add_middleware(CORSLoggingMiddleware)
+
+# Update the existing CORS middleware configuration with more detailed logging
+logger.info("Configuring CORS middleware with the following settings:")
+logger.info(f"Allowed origins: {origins}")
+logger.info("Allow credentials: True")
+logger.info("Allow methods: ['*']")
+logger.info("Allow headers: ['*']")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -55,7 +93,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Configure paths
 config = Config()

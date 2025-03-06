@@ -16,6 +16,8 @@ services:
       ALLOWED_ORIGIN_URLS: all,http://danaulns.iptime.org:${FRONTEND_PORT}
     env_file:
       - ./backend/.env
+    networks:
+      - app-network
 
   frontend:
     image: lambki/email-sender-frontend:latest
@@ -24,7 +26,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_BACKEND_URL: "http://127.0.0.1:${BACKEND_PORT}"
+        REACT_APP_BACKEND_URL: "http://danaulns.iptime.org:${BACKEND_PORT}"
     restart: always # or "unless-stopped" for production
     ports:
       # For nginx
@@ -35,4 +37,10 @@ services:
       - backend
     # Optionally, you can also set the runtime environment, but it won't affect the built code:
     # environment:
-    #   REACT_APP_BACKEND_URL: http://localhost:${BACKEND_PORT}
+    #   REACT_APP_BACKEND_URL: http://danaulns.iptime.org:${BACKEND_PORT}
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
