@@ -1,6 +1,14 @@
 # Stage 1: Build the React app
 FROM node:20-alpine as build
 
+# Install tzdata
+RUN apk add --no-cache tzdata
+
+# Set the TZ environment variable and configure /etc/localtime
+ENV TZ=Asia/Seoul
+RUN cp /usr/share/zoneinfo/$TZ /etc/localtime \
+&& echo $TZ > /etc/timezone
+
 # Set working directory
 WORKDIR /frontend_app
 
@@ -25,7 +33,7 @@ FROM nginx:stable-alpine
 COPY --from=build /frontend_app/build /usr/share/nginx/html
 
 # Copy a custom Nginx configuration
-#COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port 80
 EXPOSE 80

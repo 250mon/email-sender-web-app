@@ -26,7 +26,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_BACKEND_URL: "http://danaulns.iptime.org:${BACKEND_PORT}"
+        #REACT_APP_BACKEND_URL: "http://danaulns.iptime.org:${BACKEND_PORT}"
+        REACT_APP_BACKEND_URL: "http://localhost:${BACKEND_PORT}"
     restart: always # or "unless-stopped" for production
     ports:
       # For nginx

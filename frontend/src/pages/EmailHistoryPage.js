@@ -208,7 +208,7 @@ function EmailHistoryPage() {
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell>{formatDate(record.sent_at)}</TableCell>
+                    <TableCell>{formatDate(record.created_at)}</TableCell>
                     <TableCell>
                       {record.recipient_name}
                       <Typography

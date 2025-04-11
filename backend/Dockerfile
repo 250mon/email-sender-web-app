@@ -8,6 +8,15 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /backend_app
 
+# Install tzdata
+RUN apt-get update \
+&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata \
+&& rm -rf /var/lib/apt/lists/*
+
+# Set the TZ environment variable and configure /etc/localtime
+ENV TZ=Asia/Seoul
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Install dependencies
 COPY requirements.txt /backend_app/
 RUN pip install --upgrade pip && pip install -r /backend_app/requirements.txt
