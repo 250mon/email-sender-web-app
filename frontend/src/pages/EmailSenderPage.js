@@ -162,7 +162,7 @@ function EmailSenderPage() {
             name: recipient.name,
             status: "pending",
             message: "Waiting to send...",
-          })),
+          }))
         );
       }
 
@@ -173,36 +173,27 @@ function EmailSenderPage() {
 
       while (newRemainingRecipients.length > 0 && !currentRecipient) {
         const nextRecipient = newRemainingRecipients[0];
-        const matchingFiles =
-          fileFilter === "all-recipients"
-            ? uploadedFiles
-            : uploadedFiles.filter((file) =>
-                applyFilePattern(file.name, nextRecipient.name),
-              );
+        const matchingFiles = fileFilter === "all-recipients" 
+          ? uploadedFiles 
+          : uploadedFiles.filter(file => applyFilePattern(file.name, nextRecipient.name));
 
         if (matchingFiles.length > 0) {
           currentRecipient = nextRecipient;
           currentFiles = matchingFiles;
         } else {
           // Update status for skipped recipient
-          setStatus((prev) =>
-            prev.map((s) =>
-              s.email === nextRecipient.email
-                ? {
-                    ...s,
-                    status: "skipped",
-                    message: "No matching files found",
-                  }
-                : s,
-            ),
-          );
+          setStatus(prev => prev.map(s => 
+            s.email === nextRecipient.email 
+              ? { ...s, status: "skipped", message: "No matching files found" }
+              : s
+          ));
         }
         newRemainingRecipients = newRemainingRecipients.slice(1);
       }
 
       if (!currentRecipient) {
         // No more recipients with matching files
-        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        setConfirmDialog(prev => ({ ...prev, open: false }));
         setSending(false);
         return;
       }
@@ -214,7 +205,7 @@ function EmailSenderPage() {
         files: currentFiles,
         currentRecipient,
         remainingRecipients: newRemainingRecipients,
-        skipConfirmation: false,
+        skipConfirmation: false
       });
     } catch (error) {
       setError("Failed to fetch recipients for confirmation");
@@ -314,30 +305,24 @@ function EmailSenderPage() {
    */
   const handleConfirmation = async (action) => {
     if (action === "cancel-all") {
-      setConfirmDialog((prev) => ({ ...prev, open: false }));
+      setConfirmDialog(prev => ({ ...prev, open: false }));
       setSending(false);
       return;
     }
 
     if (action === "skip") {
       // Update status for skipped recipient
-      setStatus((prev) =>
-        prev.map((s) =>
-          s.email === confirmDialog.currentRecipient.email
-            ? {
-                ...s,
-                status: "skipped",
-                message: "Skipped by user",
-              }
-            : s,
-        ),
-      );
+      setStatus(prev => prev.map(s => 
+        s.email === confirmDialog.currentRecipient.email 
+          ? { ...s, status: "skipped", message: "Skipped by user" }
+          : s
+      ));
 
       // Show confirmation for next recipient
       await showConfirmation(
         confirmDialog.emailData,
         confirmDialog.fileFilter,
-        confirmDialog.remainingRecipients,
+        confirmDialog.remainingRecipients
       );
       return;
     }
@@ -347,13 +332,11 @@ function EmailSenderPage() {
 
     try {
       setSending(true);
-      setStatus((prev) =>
-        prev.map((s) =>
-          s.email === currentRecipient.email
-            ? { ...s, status: "sending", message: "Sending..." }
-            : s,
-        ),
-      );
+      setStatus(prev => prev.map(s => 
+        s.email === currentRecipient.email 
+          ? { ...s, status: "sending", message: "Sending..." }
+          : s
+      ));
 
       let recipientFiles = confirmDialog.files;
       if (recipientFiles.length === 0) {
@@ -368,17 +351,15 @@ function EmailSenderPage() {
         files: recipientFiles,
       });
 
-      setStatus((prev) =>
-        prev.map((s) =>
-          s.email === currentRecipient.email
-            ? {
-                ...s,
-                status: response.data.success ? "success" : "error",
-                message: response.data.message,
-              }
-            : s,
-        ),
-      );
+      setStatus(prev => prev.map(s => 
+        s.email === currentRecipient.email 
+          ? { 
+              ...s, 
+              status: response.data.success ? "success" : "error",
+              message: response.data.message
+            }
+          : s
+      ));
 
       // Show confirmation for next recipient or finish
       if (skipFutureConfirmations) {
@@ -387,34 +368,29 @@ function EmailSenderPage() {
           await handleEmailSubmit(
             confirmDialog.emailData,
             confirmDialog.fileFilter,
-            recipient,
+            recipient
           );
         }
-        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        setConfirmDialog(prev => ({ ...prev, open: false }));
       } else {
         // Show confirmation for next recipient
         await showConfirmation(
           confirmDialog.emailData,
           confirmDialog.fileFilter,
-          confirmDialog.remainingRecipients,
+          confirmDialog.remainingRecipients
         );
       }
     } catch (error) {
-      setStatus((prev) =>
-        prev.map((s) =>
-          s.email === currentRecipient.email
-            ? {
-                ...s,
-                status: "error",
-                message:
-                  error.response?.data?.message ||
-                  error.message ||
-                  "Failed to send email",
-              }
-            : s,
-        ),
-      );
-      setConfirmDialog((prev) => ({ ...prev, open: false }));
+      setStatus(prev => prev.map(s => 
+        s.email === currentRecipient.email 
+          ? { 
+              ...s, 
+              status: "error",
+              message: error.response?.data?.message || error.message || "Failed to send email"
+            }
+          : s
+      ));
+      setConfirmDialog(prev => ({ ...prev, open: false }));
     } finally {
       if (confirmDialog.remainingRecipients.length === 0) {
         setSending(false);

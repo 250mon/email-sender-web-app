@@ -78,12 +78,19 @@ class EmailSender:
                 logger.debug("Converting message to string")
                 text = message.as_string()
                 logger.debug("Sending email")
-                server.sendmail(self.sender_email, receiver_email, text)
-                logger.debug("Email sent successfully")
-                return {
-                    "success": True,
-                    "message": f"Email sent successfully to {receiver_email}",
-                }
+                sent_result = server.sendmail(self.sender_email, receiver_email, text)
+                logger.debug(f"Email sent result: {sent_result}")
+                if sent_result:
+                    logger.error(f"Email failed to send to {receiver_email}: {sent_result}")
+                    return {
+                        "success": False,
+                        "message": f"Email failed to send to {receiver_email}: {sent_result}",
+                    }
+                else:
+                    return {
+                        "success": True,
+                        "message": f"Email sent successfully to {receiver_email}",
+                    }
         except Exception as e:
             error_msg = f"Failed to send email to {receiver_email}: {str(e)}"
             logger.error(error_msg, exc_info=True)  # This will log the full stack trace
