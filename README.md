@@ -17,7 +17,9 @@ Launch the frontend and backend separately using the following commands
 
 # Production mode
 
-Launch the frontend and backend together using docker
+- Launch the frontend and backend together using docker
+- Change IP_ADDR in .env
+- Alwasy use the url including IP_ADDR (CORS)
 
 ## Update from docker hub
 
