@@ -2,14 +2,14 @@ import glob
 import json
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlparse
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Cookie, Depends, FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import Cookie, Depends, FastAPI, File, HTTPException, Response, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import or_
@@ -23,6 +23,8 @@ from dependencies import save_upload_files
 from email_sender import EmailSender
 from logger_config import setup_logger
 from schemas import AddressCreate, EmailRequest
+import asyncio
+import logging
 
 # Load environment variables
 load_dotenv()
@@ -102,11 +104,34 @@ UPLOAD_FOLDER.mkdir(exist_ok=True)
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
+# Directory to store uploaded files
+UPLOAD_DIR = "uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
+# Function to get file age in days
+def get_file_age(file_path):
+    return (datetime.now() - datetime.fromtimestamp(os.path.getmtime(file_path))).days
+
+# Function to clean up old files
+def cleanup_old_files():
+    try:
+        for filename in os.listdir(UPLOAD_DIR):
+            file_path = os.path.join(UPLOAD_DIR, filename)
+            if os.path.isfile(file_path):
+                file_age = get_file_age(file_path)
+                if file_age >= 30:  # 30 days = 1 month
+                    try:
+                        os.remove(file_path)
+                        logging.info(f"Deleted old file: {file_path}")
+                    except Exception as e:
+                        logging.error(f"Error deleting file {file_path}: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error in cleanup: {str(e)}")
 
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy"}
-
 
 @app.post("/api/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
@@ -190,11 +215,10 @@ async def send_email(email_request: EmailRequest, db: Session = Depends(get_db))
             files=files_to_send,
         )
 
-        if not result["success"]:
-            logger.error(f"Email sending failed: {result['message']}")
-            raise HTTPException(status_code=500, detail=result["message"])
+        # Clean up old files after sending email
+        cleanup_old_files()
 
-        # Save to email history
+        # Save to email history regardless of success
         history = EmailHistory(
             recipient_name=email_request.recipient_name,
             recipient_email=email_request.receiver_email,
@@ -203,18 +227,12 @@ async def send_email(email_request: EmailRequest, db: Session = Depends(get_db))
             status="success" if result["success"] else "error",
             message=result["message"],
         )
-
         db.add(history)
         db.commit()
 
-        # Clean up uploaded files
-        for file_path in files_to_send:
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.debug(f"Deleted file: {file_path}")
-            except Exception as e:
-                logger.warning(f"Failed to delete file {file_path}: {str(e)}")
+        if not result["success"]:
+            logger.error(f"Email sending failed: {result['message']}")
+            return result
 
         return result
 
@@ -223,6 +241,17 @@ async def send_email(email_request: EmailRequest, db: Session = Depends(get_db))
     except Exception as e:
         error_msg = f"Unexpected error in send_email: {str(e)}"
         logger.error(error_msg, exc_info=True)
+        # Save unexpected errors to history
+        history = EmailHistory(
+            recipient_name=email_request.recipient_name,
+            recipient_email=email_request.receiver_email,
+            subject=email_request.subject,
+            files=json.dumps([f["name"] for f in email_request.files]),
+            status="error",
+            message=error_msg,
+        )
+        db.add(history)
+        db.commit()
         raise HTTPException(status_code=500, detail=error_msg)
 
 

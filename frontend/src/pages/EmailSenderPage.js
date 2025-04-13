@@ -65,6 +65,78 @@ const applyFilePattern = (filename, pattern) => {
 };
 
 /**
+ * Sends emails to multiple recipients
+ * @param {Array} recipients - Array of recipient objects
+ * @param {Object} emailData - The email data (subject, body)
+ * @param {string} fileFilter - The file filter type
+ * @param {Array} uploadedFiles - All uploaded files
+ * @param {Function} setStatus - Function to update status
+ * @returns {Promise<void>}
+ */
+const sendEmailsToRecipients = async (recipients, emailData, fileFilter, uploadedFiles, setStatus) => {
+    // Group recipients by their matching files
+    const recipientsWithFiles = recipients.map(recipient => {
+        const matchingFiles = fileFilter === "all-recipients" 
+            ? uploadedFiles 
+            : uploadedFiles.filter(file => applyFilePattern(file.name, recipient.name));
+
+        return {
+            recipient,
+            matchingFiles
+        };
+    });
+
+    // Send emails to each recipient
+    for (const { recipient, matchingFiles } of recipientsWithFiles) {
+        // Update status to sending
+        setStatus(prev => prev.map(s => 
+            s.email === recipient.email 
+                ? { ...s, status: "sending", message: "Sending..." }
+                : s
+        ));
+
+        if (matchingFiles.length === 0) {
+            setStatus(prev => prev.map(s => 
+                s.email === recipient.email 
+                    ? { ...s, status: "skipped", message: "No matching files found" }
+                    : s
+            ));
+            continue;
+        }
+
+        try {
+            const response = await axios.post(`${BACKEND_URL}/api/send-email`, {
+                receiver_email: recipient.email,
+                recipient_name: recipient.name,
+                subject: emailData.subject,
+                body: emailData.body,
+                files: matchingFiles,
+            });
+
+            setStatus(prev => prev.map(s => 
+                s.email === recipient.email 
+                    ? { 
+                        ...s, 
+                        status: response.data.success ? "success" : "error",
+                        message: response.data.message
+                    }
+                    : s
+            ));
+        } catch (error) {
+            setStatus(prev => prev.map(s => 
+                s.email === recipient.email 
+                    ? { 
+                        ...s, 
+                        status: "error",
+                        message: error.response?.data?.message || error.message || "Failed to send email"
+                    }
+                    : s
+            ));
+        }
+    }
+};
+
+/**
  * EmailSenderPage component handles the email sending functionality including file uploads,
  * email composition, and status tracking for multiple recipients.
  * @return {JSX.Element} The rendered email sender page
@@ -231,68 +303,7 @@ function EmailSenderPage() {
 
     try {
       setSending(true);
-
-      // Send emails to each recipient
-      for (let recipient of status) {
-        // Use status instead of fetching recipients again
-        setStatus((prev) =>
-          prev.map((s) =>
-            s.email === recipient.email
-              ? { ...s, status: "sending", message: "Sending..." }
-              : s,
-          ),
-        );
-
-        try {
-          let recipientFiles = [];
-          if (fileFilter === "all-recipients") {
-            recipientFiles = uploadedFiles;
-          } else if (fileFilter === "recipient-name") {
-            recipientFiles = uploadedFiles.filter((file) =>
-              applyFilePattern(file.name, recipient.name),
-            );
-          }
-
-          if (recipientFiles.length === 0) {
-            throw new Error("No matching files found for this recipient");
-          }
-
-          const response = await axios.post(`${BACKEND_URL}/api/send-email`, {
-            receiver_email: recipient.email,
-            recipient_name: recipient.name,
-            subject: emailData.subject,
-            body: emailData.body,
-            files: recipientFiles,
-          });
-
-          setStatus((prev) =>
-            prev.map((s) =>
-              s.email === recipient.email
-                ? {
-                    ...s,
-                    status: response.data.success ? "success" : "error",
-                    message: response.data.message,
-                  }
-                : s,
-            ),
-          );
-        } catch (error) {
-          setStatus((prev) =>
-            prev.map((s) =>
-              s.email === recipient.email
-                ? {
-                    ...s,
-                    status: "error",
-                    message:
-                      error.response?.data?.message ||
-                      error.message ||
-                      "Failed to send email",
-                  }
-                : s,
-            ),
-          );
-        }
-      }
+      await sendEmailsToRecipients(status, emailData, fileFilter, uploadedFiles, setStatus);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to send emails");
     } finally {
@@ -332,47 +343,27 @@ function EmailSenderPage() {
 
     try {
       setSending(true);
-      setStatus(prev => prev.map(s => 
-        s.email === currentRecipient.email 
-          ? { ...s, status: "sending", message: "Sending..." }
-          : s
-      ));
-
-      let recipientFiles = confirmDialog.files;
-      if (recipientFiles.length === 0) {
-        throw new Error("No matching files found for this recipient");
-      }
-
-      const response = await axios.post(`${BACKEND_URL}/api/send-email`, {
-        receiver_email: currentRecipient.email,
-        recipient_name: currentRecipient.name,
-        subject: confirmDialog.emailData.subject,
-        body: confirmDialog.emailData.body,
-        files: recipientFiles,
-      });
-
-      setStatus(prev => prev.map(s => 
-        s.email === currentRecipient.email 
-          ? { 
-              ...s, 
-              status: response.data.success ? "success" : "error",
-              message: response.data.message
-            }
-          : s
-      ));
-
-      // Show confirmation for next recipient or finish
+      
       if (skipFutureConfirmations) {
-        // Send to all remaining recipients without confirmation
-        for (const recipient of confirmDialog.remainingRecipients) {
-          await handleEmailSubmit(
-            confirmDialog.emailData,
-            confirmDialog.fileFilter,
-            recipient
-          );
-        }
+        // Send to all recipients at once
+        const allRecipients = [currentRecipient, ...confirmDialog.remainingRecipients];
+        await sendEmailsToRecipients(
+          allRecipients,
+          confirmDialog.emailData,
+          confirmDialog.fileFilter,
+          uploadedFiles,
+          setStatus
+        );
         setConfirmDialog(prev => ({ ...prev, open: false }));
       } else {
+        // Send to current recipient only
+        await sendEmailsToRecipients(
+          [currentRecipient],
+          confirmDialog.emailData,
+          confirmDialog.fileFilter,
+          uploadedFiles,
+          setStatus
+        );
         // Show confirmation for next recipient
         await showConfirmation(
           confirmDialog.emailData,
@@ -381,18 +372,9 @@ function EmailSenderPage() {
         );
       }
     } catch (error) {
-      setStatus(prev => prev.map(s => 
-        s.email === currentRecipient.email 
-          ? { 
-              ...s, 
-              status: "error",
-              message: error.response?.data?.message || error.message || "Failed to send email"
-            }
-          : s
-      ));
       setConfirmDialog(prev => ({ ...prev, open: false }));
     } finally {
-      if (confirmDialog.remainingRecipients.length === 0) {
+      if (confirmDialog.remainingRecipients.length === 0 || skipFutureConfirmations) {
         setSending(false);
       }
     }

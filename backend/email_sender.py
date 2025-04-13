@@ -68,33 +68,48 @@ class EmailSender:
 
             logger.debug("Connecting to SMTP server")
             context = ssl.create_default_context()
-            with smtplib.SMTP(self.smtp_server, self.port) as server:
-                logger.debug("Starting TLS")
+            with smtplib.SMTP(self.smtp_server, self.port, timeout=10) as server:
                 server.ehlo()
+                logger.debug("Starting TLS")
                 server.starttls(context=context)
                 server.ehlo()
                 logger.debug("Logging into SMTP server")
                 server.login(self.sender_email, self.password)
-                logger.debug("Converting message to string")
-                text = message.as_string()
+
+                # === START SMTP CONVERSATION ===
+                logger.debug("Starting SMTP conversation")
+                # MAIL FROM first
+                code, response = server.mail(self.sender_email)
+                if code != 250:
+                    error_msg = f"MAIL FROM command failed ({code}): {response.decode(errors='ignore')}"
+                    logger.error(error_msg)
+                    return {"success": False, "message": error_msg}
+
+                # Then RCPT TO
+                logger.debug(f"Verifying recipient {receiver_email}")
+                code, response = server.rcpt(receiver_email)
+                if code != 250 and code != 251:
+                    error_msg = f"Recipient verification failed ({code}): {response.decode(errors='ignore')}"
+                    logger.error(error_msg)
+                    return {"success": False, "message": error_msg}
+
+                # === ACTUALLY SEND ===
                 logger.debug("Sending email")
-                sent_result = server.sendmail(self.sender_email, receiver_email, text)
-                logger.debug(f"Email sent result: {sent_result}")
-                if sent_result:
-                    logger.error(f"Email failed to send to {receiver_email}: {sent_result}")
-                    return {
-                        "success": False,
-                        "message": f"Email failed to send to {receiver_email}: {sent_result}",
-                    }
-                else:
+                try:
+                    server.send_message(message)
                     return {
                         "success": True,
                         "message": f"Email sent successfully to {receiver_email}",
                     }
+                except smtplib.SMTPRecipientsRefused as e:
+                    error_msg = f"Recipient {receiver_email} was refused by the server: {e.recipients}"
+                    logger.error(error_msg)
+                    return {"success": False, "message": error_msg}
+                except smtplib.SMTPException as e:
+                    error_msg = f"SMTP error while sending to {receiver_email}: {str(e)}"
+                    logger.error(error_msg)
+                    return {"success": False, "message": error_msg}
         except Exception as e:
             error_msg = f"Failed to send email to {receiver_email}: {str(e)}"
-            logger.error(error_msg, exc_info=True)  # This will log the full stack trace
-            return {
-                "success": False,
-                "message": error_msg,
-            }
+            logger.error(error_msg, exc_info=True)
+            return {"success": False, "message": error_msg}
