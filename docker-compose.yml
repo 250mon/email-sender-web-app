@@ -13,7 +13,10 @@ services:
       - ./backend/uploads:/backend_app/uploads
     environment:
       # For CORS
-      ALLOWED_ORIGIN_URLS: all,http://danaulns.iptime.org:${FRONTEND_PORT}
+      # dev
+      #ALLOWED_ORIGIN_URLS: all
+      # product
+      ALLOWED_ORIGIN_URLS: http://${IP_ADDR}:${FRONTEND_PORT}
     env_file:
       - ./backend/.env
     networks:
@@ -26,8 +29,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        #REACT_APP_BACKEND_URL: "http://danaulns.iptime.org:${BACKEND_PORT}"
-        REACT_APP_BACKEND_URL: "http://localhost:${BACKEND_PORT}"
+        # dev
+        # REACT_APP_BACKEND_URL: "http://localhost:${BACKEND_PORT}"
+        # product
+        REACT_APP_BACKEND_URL: "http://${IP_ADDR}:${BACKEND_PORT}"
     restart: always # or "unless-stopped" for production
     ports:
       # For nginx

@@ -1,5 +1,7 @@
 ## Development mode
 
+Launch the frontend and backend separately using the following commands
+
 ### backend
 
 - `.env`: Uncomment dev mode env variables
@@ -10,6 +12,8 @@
 - `npm start` will launch the web browser
 
 ## Production mode
+
+Launch the frontend and backend together using docker
 
 ### backend
 
