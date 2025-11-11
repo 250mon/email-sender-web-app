@@ -105,7 +105,7 @@ const sendEmailsToRecipients = async (recipients, emailData, fileFilter, uploade
         }
 
         try {
-            const response = await axios.post(`${BACKEND_URL}/api/send-email`, {
+            const response = await axios.post(`${BACKEND_URL}/send-email`, {
                 receiver_email: recipient.email,
                 recipient_name: recipient.name,
                 subject: emailData.subject,
@@ -224,7 +224,7 @@ function EmailSenderPage() {
       // Fetch recipients only on initial call
       let remainingRecipients = recipients;
       if (!remainingRecipients) {
-        const response = await axios.get(`${BACKEND_URL}/api/active-addresses`);
+        const response = await axios.get(`${BACKEND_URL}/active-addresses`);
         remainingRecipients = response.data;
 
         // Initialize status for all recipients

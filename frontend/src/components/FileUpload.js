@@ -55,7 +55,7 @@ const FileUpload = ({ onFilesUpload, files = [] }) => {
         }
 
         try {
-            const response = await axios.post(`${BACKEND_URL}/api/upload`, formData, {
+            const response = await axios.post(`${BACKEND_URL}/upload`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 }

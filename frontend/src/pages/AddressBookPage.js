@@ -50,7 +50,7 @@ const AddressBookPage = () => {
 
   const loadAddresses = useCallback(async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/addresses`, {
+      const response = await axios.get(`${BACKEND_URL}/addresses`, {
         params: {
           status: showActiveOnly ? 'active' : undefined
         }
@@ -61,7 +61,7 @@ const AddressBookPage = () => {
         error: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
-        url: `${BACKEND_URL}/api/addresses`,
+        url: `${BACKEND_URL}/addresses`,
         params: { status: showActiveOnly ? 'active' : undefined },
         stack: error.stack
       });
@@ -117,13 +117,13 @@ const AddressBookPage = () => {
 
     try {
       if (editingAddress) {
-        await axios.put(`${BACKEND_URL}/api/addresses/${editingAddress.id}`, {
+        await axios.put(`${BACKEND_URL}/addresses/${editingAddress.id}`, {
           ...formData,
         });
         setEditingAddress(null);
         showSnackbar("Address updated successfully");
       } else {
-        await axios.post(`${BACKEND_URL}/api/addresses`, formData);
+        await axios.post(`${BACKEND_URL}/addresses`, formData);
         showSnackbar("Address added successfully");
       }
       loadAddresses();
@@ -139,7 +139,7 @@ const AddressBookPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this address?")) {
       try {
-        await axios.delete(`${BACKEND_URL}/api/addresses/${id}`);
+        await axios.delete(`${BACKEND_URL}/addresses/${id}`);
         showSnackbar("Address deleted successfully");
         loadAddresses();
       } catch (error) {

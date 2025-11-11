@@ -49,7 +49,7 @@ function EmailHistoryPage() {
     setLoading(true);
     setError(null);
     try {
-      let url = `${BACKEND_URL}/api/email-history`;
+      let url = `${BACKEND_URL}/email-history`;
       const params = new URLSearchParams();
 
       if (filters.recipient) params.append("recipient", filters.recipient);

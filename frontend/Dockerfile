@@ -1,5 +1,5 @@
-# Stage 1: Build the React app
-FROM node:20-alpine as build
+# Build the React app
+FROM node:20-alpine
 
 # Install tzdata
 RUN apk add --no-cache tzdata
@@ -24,16 +24,15 @@ COPY . .
 # Build the React app for production
 ARG REACT_APP_BACKEND_URL
 ENV REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+ARG PUBLIC_URL
+ENV PUBLIC_URL=${PUBLIC_URL}
 RUN npm run build
 
-# Stage 2: Serve the build with Nginx
-FROM nginx:stable-alpine
-
-# Copy the build output from the previous stage to Nginx's html folder
-COPY --from=build /frontend_app/build /usr/share/nginx/html
+# Install serve to serve the static files
+RUN npm install -g serve
 
 # Expose port 80
 EXPOSE 80
 
-# Start Nginx in the foreground
-CMD ["nginx", "-g", "daemon off;"]
+# Start serve to serve the build folder with SPA support
+CMD ["serve", "-s", "build", "-l", "80", "--single"]

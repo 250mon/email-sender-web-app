@@ -51,7 +51,7 @@ function FilesManagerPage() {
   const loadFiles = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/files`);
+      const response = await axios.get(`${BACKEND_URL}/files`);
       setFiles(response.data.files || []);
     } catch (error) {
       showSnackbar("Failed to load files", "error");
@@ -88,7 +88,7 @@ function FilesManagerPage() {
     
     setLoading(true);
     try {
-      await axios.delete(`${BACKEND_URL}/api/files`, {
+      await axios.delete(`${BACKEND_URL}/files`, {
         data: selectedFiles,
       });
       showSnackbar(`${selectedFiles.length} files deleted successfully`);
@@ -110,7 +110,7 @@ function FilesManagerPage() {
     
     setLoading(true);
     try {
-      await axios.delete(`${BACKEND_URL}/api/files`);
+      await axios.delete(`${BACKEND_URL}/files`);
       showSnackbar("All files deleted successfully");
       setSelectedFiles([]);
       loadFiles();
