@@ -1,8 +1,8 @@
 services:
   # Services for prod profile (direct access)
   backend:
-    image: lambki/email-sender-backend:latest
-    container_name: backend
+    image: lambki/emailsender-backend:latest
+    container_name: emailsender-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -14,17 +14,18 @@ services:
       - ./backend/uploads:/backend_app/uploads
     environment:
       # Allow all origins since everything goes through nginx proxy
-      ALLOWED_ORIGIN_URLS: all
+      - ALLOWED_ORIGIN_URLS-all
     env_file:
       - ./backend/.env
     networks:
-      - app-network
+      - emailsender-net
+      - my-shared-proxy-net
     profiles:
       - prod
 
   frontend:
-    image: lambki/email-sender-frontend:latest
-    container_name: frontend
+    image: lambki/emailsender-frontend:latest
+    container_name: emailsender-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -41,71 +42,13 @@ services:
     depends_on:
       - backend
     networks:
-      - app-network
+      - emailsender-net
+      - my-shared-proxy-net
     profiles:
       - prod
 
-  # Services for nginx-prod profile (nginx proxy)
-  backend-nginx:
-    image: lambki/email-sender-backend:latest
-    container_name: backend-nginx
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
-    expose:
-      - "8000"
-    volumes:
-      - ./backend/db:/backend_app/db
-      - ./backend/uploads:/backend_app/uploads
-    environment:
-      # Allow all origins since everything goes through nginx proxy
-      ALLOWED_ORIGIN_URLS: all
-    env_file:
-      - ./backend/.env
-    networks:
-      - app-network
-    profiles:
-      - nginx-prod
-
-  frontend-nginx:
-    image: lambki/email-sender-frontend:latest
-    container_name: frontend-nginx
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        # Use relative URL - works regardless of IP/hostname
-        REACT_APP_BACKEND_URL: "/email_sender/api"
-        PUBLIC_URL: "/email_sender"
-    restart: always
-    expose:
-      - "80"
-    volumes:
-      - ./frontend:/frontend
-    depends_on:
-      - backend-nginx
-    networks:
-      - app-network
-    profiles:
-      - nginx-prod
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx-proxy
-    restart: always
-    ports:
-      - "${NGINX_PORT}:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend-nginx
-      - frontend-nginx
-    networks:
-      - app-network
-    profiles:
-      - nginx-prod
-
 networks:
-  app-network:
+  my-shared-proxy-net:
+    external: true
+  emailsender-net:
     driver: bridge
