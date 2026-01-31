@@ -1,110 +1,47 @@
 services:
-  # Services for prod profile (direct access)
   backend:
     image: lambki/email-sender-backend:latest
-    container_name: backend
+    container_name: email-sender-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "${BACKEND_PORT}:8000"
+      - "${BACKEND_PORT:-8080}:8000"
     volumes:
       - ./backend/db:/backend_app/db
       - ./backend/uploads:/backend_app/uploads
     environment:
-      # Allow all origins since everything goes through nginx proxy
-      ALLOWED_ORIGIN_URLS: all
+      # Allow frontend origin for CORS
+      ALLOWED_ORIGIN_URLS: "http://localhost:3000,http://127.0.0.1:3000,http://${IP_ADDR:-localhost}:${FRONTEND_PORT:-3000}"
     env_file:
       - ./backend/.env
     networks:
       - app-network
-    profiles:
-      - prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
-    image: lambki/email-sender-frontend:latest
-    container_name: frontend
+    image: lambki/email-sender-nextjs:latest
+    container_name: email-sender-frontend
     build:
-      context: ./frontend
+      context: ./frontend-nextjs
       dockerfile: Dockerfile
-      args:
-        # REACT_APP_BACKEND_URL: "http://${IP_ADDR}:${BACKEND_PORT}/api"
-        # For prod profile with separate nginx proxy, use relative URL
-        REACT_APP_BACKEND_URL: "/email_sender/api"
-        PUBLIC_URL: "/email_sender"
     restart: always
     ports:
-      - "${FRONTEND_PORT}:80"
-    volumes:
-      - ./frontend:/frontend
-    depends_on:
-      - backend
-    networks:
-      - app-network
-    profiles:
-      - prod
-
-  # Services for nginx-prod profile (nginx proxy)
-  backend-nginx:
-    image: lambki/email-sender-backend:latest
-    container_name: backend-nginx
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
-    expose:
-      - "8000"
-    volumes:
-      - ./backend/db:/backend_app/db
-      - ./backend/uploads:/backend_app/uploads
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      # Allow all origins since everything goes through nginx proxy
-      ALLOWED_ORIGIN_URLS: all
-    env_file:
-      - ./backend/.env
-    networks:
-      - app-network
-    profiles:
-      - nginx-prod
-
-  frontend-nginx:
-    image: lambki/email-sender-frontend:latest
-    container_name: frontend-nginx
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        # Use relative URL - works regardless of IP/hostname
-        REACT_APP_BACKEND_URL: "/email_sender/api"
-        PUBLIC_URL: "/email_sender"
-    restart: always
-    expose:
-      - "80"
-    volumes:
-      - ./frontend:/frontend
+      # Backend API URL for Next.js
+      NEXT_PUBLIC_BACKEND_URL: "http://${IP_ADDR:-localhost}:${BACKEND_PORT:-8080}/api"
     depends_on:
-      - backend-nginx
+      backend:
+        condition: service_healthy
     networks:
       - app-network
-    profiles:
-      - nginx-prod
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx-proxy
-    restart: always
-    ports:
-      - "${NGINX_PORT}:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend-nginx
-      - frontend-nginx
-    networks:
-      - app-network
-    profiles:
-      - nginx-prod
 
 networks:
   app-network:

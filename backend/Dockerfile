@@ -8,9 +8,9 @@ ENV PYTHONUNBUFFERED=1
 # Set working directory
 WORKDIR /backend_app
 
-# Install tzdata
+# Install tzdata and curl for health checks
 RUN apt-get update \
-&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata \
+&& DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata curl \
 && rm -rf /var/lib/apt/lists/*
 
 # Set the TZ environment variable and configure /etc/localtime
