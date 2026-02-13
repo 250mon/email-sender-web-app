@@ -31,12 +31,12 @@ services:
     build:
       context: ./frontend-nextjs
       dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* vars must be set at build time for client-side code
+        NEXT_PUBLIC_BACKEND_URL: "http://${IP_ADDR:-localhost}:${BACKEND_PORT:-8080}/api"
     restart: always
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
-    environment:
-      # Backend API URL for Next.js
-      NEXT_PUBLIC_BACKEND_URL: "http://${IP_ADDR:-localhost}:${BACKEND_PORT:-8080}/api"
     depends_on:
       backend:
         condition: service_healthy
