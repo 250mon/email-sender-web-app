@@ -17,7 +17,7 @@ services:
     env_file:
       - ./backend/.env
     networks:
-      - app-network
+      - my-shared-proxy-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -41,8 +41,8 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - app-network
+      - my-shared-proxy-net
 
 networks:
-  app-network:
-    driver: bridge
+  my-shared-proxy-net:
+    external: true
