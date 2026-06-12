@@ -220,9 +220,12 @@ export default function EmailSenderPage() {
   }, []);
 
   const handleFilesUpload = (files: UploadedFile[]) => {
+    const isAddingFiles = files.length > uploadedFiles.length;
     setUploadedFiles(files);
     setError(null);
-    setStatus([]);
+    if (!isAddingFiles) {
+      setStatus([]);
+    }
   };
 
   const handleReset = () => {

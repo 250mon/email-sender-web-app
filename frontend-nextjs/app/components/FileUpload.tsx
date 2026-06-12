@@ -75,7 +75,10 @@ const FileUpload = ({ onFilesUpload, files = [] }: FileUploadProps) => {
         },
       });
 
-      onFilesUpload(response.data.files);
+      const newFiles: UploadedFile[] = response.data.files;
+      const existingNames = new Set(files.map((f) => f.name));
+      const filesToAdd = newFiles.filter((f) => !existingNames.has(f.name));
+      onFilesUpload([...files, ...filesToAdd]);
     } catch (error) {
       console.error("Upload failed:", error);
     } finally {
