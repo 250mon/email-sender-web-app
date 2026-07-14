@@ -12,12 +12,15 @@ services:
       - ./backend/db:/backend_app/db
       - ./backend/uploads:/backend_app/uploads
     environment:
-      # Allow frontend origin for CORS
-      ALLOWED_ORIGIN_URLS: "http://localhost:3000,http://127.0.0.1:3000,http://${IP_ADDR:-localhost}:${FRONTEND_PORT:-3000}"
+      # Allow frontend origin(s) for CORS. Override ALLOWED_ORIGIN_URLS in
+      # .env to add the public https domain when deployed behind danaul-caddy.
+      ALLOWED_ORIGIN_URLS: "${ALLOWED_ORIGIN_URLS:-http://localhost:3000,http://127.0.0.1:3000,http://${IP_ADDR:-localhost}:${FRONTEND_PORT:-3000}}"
     env_file:
       - ./backend/.env
     networks:
-      - my-shared-proxy-net
+      edge:
+        aliases:
+          - email-sender-backend
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -32,8 +35,10 @@ services:
       context: ./frontend-nextjs
       dockerfile: Dockerfile
       args:
-        # NEXT_PUBLIC_* vars must be set at build time for client-side code
-        NEXT_PUBLIC_BACKEND_URL: "http://${IP_ADDR:-localhost}:${BACKEND_PORT:-8080}/api"
+        # NEXT_PUBLIC_* vars must be set at build time for client-side code.
+        # Set NEXT_PUBLIC_BACKEND_URL in .env to https://emailsender.kdocai.com/api
+        # when deployed behind danaul-caddy.
+        NEXT_PUBLIC_BACKEND_URL: "${NEXT_PUBLIC_BACKEND_URL:-http://${IP_ADDR:-localhost}:${BACKEND_PORT:-8080}/api}"
     restart: always
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
@@ -41,8 +46,12 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - my-shared-proxy-net
+      edge:
+        aliases:
+          - email-sender-frontend
 
 networks:
   my-shared-proxy-net:
+    external: true
+  edge:
     external: true
