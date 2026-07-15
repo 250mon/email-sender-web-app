@@ -31,7 +31,7 @@ Launch both services together using Docker Compose:
 # 1. Create .env file from example
 cp .env.example .env
 
-# 2. Edit .env and set IP_ADDR to your server IP
+# 2. Edit .env and set LOCAL_HOST to your server IP
 # For local testing, leave as localhost
 
 # 3. Build and start services
@@ -77,8 +77,8 @@ FRONTEND_PORT=3000
 # Backend port
 BACKEND_PORT=8080
 
-# Server IP for external access
-IP_ADDR=localhost
+# Hostname/IP for local/LAN access (used to derive default URLs)
+LOCAL_HOST=localhost
 ```
 
 ## Project Structure

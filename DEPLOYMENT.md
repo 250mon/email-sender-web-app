@@ -1,148 +1,118 @@
 # Deployment Guide
 
-This application supports two deployment profiles with simplified configuration using relative URLs.
+This application deploys as two containers — `backend` (FastAPI) and
+`frontend` (Next.js) — that sit behind an **external reverse proxy**
+(`danaul-caddy`) on a shared Docker network. There is no nginx and no
+docker-compose profiles; `docker compose up` always starts both services.
 
-## Profiles
+## Architecture
 
-### 1. `prod` Profile - With External Nginx Proxy
-- **Frontend**: Served at `/email_sender/` via external nginx on `${NGINX_PORT}`
-- **Backend API**: Served at `/email_sender/api/` via external nginx
-- **Use case**: Production deployment with external nginx reverse proxy, path-based routing
+```
+Internet → danaul-caddy (external, not part of this repo) → edge network
+                                                                 ├── frontend (Next.js, :3000)
+                                                                 └── backend  (FastAPI, :8000 → BACKEND_PORT)
+```
 
-### 2. `nginx-prod` Profile - With Built-in Nginx Proxy
-- **Frontend**: Served at `/email_sender/` on `${NGINX_PORT}`
-- **Backend API**: Served at `/email_sender/api/` on `${NGINX_PORT}`
-- **Use case**: Production deployment with containerized nginx proxy, all-in-one solution
+- Both services join the **`edge`** Docker network, which is declared
+  `external: true` in `docker-compose.yml` — it must already exist and be
+  the same network danaul-caddy is attached to. Create it once with:
+  ```bash
+  docker network create edge
+  ```
+- The frontend calls the backend directly at `NEXT_PUBLIC_BACKEND_URL`
+  (baked in at build time — no proxying through the frontend container).
+- The backend allows browser requests only from origins listed in
+  `ALLOWED_ORIGIN_URLS` (CORS).
+- Caddy is configured and run separately (outside this repo) to route the
+  public domain to the `email-sender-frontend` / `email-sender-backend`
+  container names on the `edge` network.
 
 ## Usage
 
-### Running with `prod` profile (External Nginx)
 ```bash
-# Start services
-docker-compose --profile prod up -d
+# 1. Create your .env file
+cp .env.example .env
 
-# Rebuild after configuration changes
-docker-compose --profile prod up --build -d
+# 2. Edit .env — see "Environment Variables" below
+
+# 3. Build and start services
+docker compose up --build -d
 
 # Stop services
-docker-compose --profile prod down
+docker compose down
+
+# View logs
+docker compose logs -f
 ```
-
-**Access:**
-- Frontend: `http://localhost:${NGINX_PORT}/email_sender/`
-- Backend API: `http://localhost:${NGINX_PORT}/email_sender/api/`
-- Also accessible via IP: `http://<your-ip>:${NGINX_PORT}/email_sender/`
-
-**Note:** This profile requires an external nginx reverse proxy configured to route traffic to the containers.
-
-### Running with `nginx-prod` profile (Built-in Nginx)
-```bash
-# Start services
-docker-compose --profile nginx-prod up -d
-
-# Rebuild after configuration changes
-docker-compose --profile nginx-prod up --build -d
-
-# Stop services
-docker-compose --profile nginx-prod down
-```
-
-**Access:**
-- Frontend: `http://localhost:${NGINX_PORT}/email_sender/`
-- Backend API: `http://localhost:${NGINX_PORT}/email_sender/api/`
-- Also accessible via IP: `http://<your-ip>:${NGINX_PORT}/email_sender/`
-
-**Note:** This profile includes a containerized nginx proxy with pre-configured routing.
 
 ## Environment Variables
 
-Create a `.env` file in the project root with the following variables:
+Create a `.env` file in the project root (see `.env.example`):
 
-```bash
-# Port mappings (only environment variables needed!)
-BACKEND_PORT=8000      # For prod profile backend direct access
-FRONTEND_PORT=3000     # For prod profile frontend direct access  
-NGINX_PORT=8080        # For nginx proxy access (both profiles)
+```env
+# Host ports the containers are published on
+FRONTEND_PORT=3000
+BACKEND_PORT=8080
 
-# Note: IP_ADDR is no longer needed! 🎉
-# The application now uses relative URLs that work with any hostname.
+# Hostname/IP used ONLY to derive the two vars below for local/LAN access
+# (e.g. testing from another device on your network). Ignored once
+# NEXT_PUBLIC_BACKEND_URL / ALLOWED_ORIGIN_URLS are set explicitly.
+LOCAL_HOST=localhost
+
+# Full public URL the browser calls for the backend API. Baked into the
+# frontend at build time, so changing this requires a rebuild.
+# Behind danaul-caddy: NEXT_PUBLIC_BACKEND_URL=https://emailsender.kdocai.com/api
+#NEXT_PUBLIC_BACKEND_URL=
+
+# Origins allowed to call the backend (CORS), comma-separated.
+# Behind danaul-caddy: ALLOWED_ORIGIN_URLS=http://localhost:3000,http://127.0.0.1:3000,https://emailsender.kdocai.com
+#ALLOWED_ORIGIN_URLS=
 ```
 
-**Important:** You also need a `backend/.env` file for backend-specific settings (SMTP, database, etc.)
+- **Local/LAN use**: leave `NEXT_PUBLIC_BACKEND_URL` and
+  `ALLOWED_ORIGIN_URLS` unset — they default to
+  `http://${LOCAL_HOST}:${BACKEND_PORT}/api` and
+  `http://${LOCAL_HOST}:${FRONTEND_PORT}` respectively (see
+  `docker-compose.yml`).
+- **Behind danaul-caddy**: set both explicitly to the public `https://`
+  domain, as shown above. `LOCAL_HOST` is not used in this case.
 
-### Simplified Configuration Benefits
-- ✅ **No IP_ADDR needed** - Uses relative URLs that work with any hostname
-- ✅ **Access from anywhere** - Works with localhost, IP address, or domain names
-- ✅ **No rebuilding** - Same containers work regardless of access method
-- ✅ **Simpler CORS** - Configured to allow all origins since traffic goes through nginx
+**Important:** You also need a `backend/.env` file for backend-specific
+settings (SMTP, database — see `CLAUDE.md`).
 
 ## Service Containers
 
-### `prod` profile containers:
-- `backend` - Backend FastAPI service
-  - Exposed on: `${BACKEND_PORT}:8000`
-  - Requires external nginx for proxy
-- `frontend` - Frontend React SPA (served via `serve`)
-  - Exposed on: `${FRONTEND_PORT}:80`
-  - Requires external nginx for proxy
+- `backend` (`email-sender-backend`) — FastAPI, published on
+  `${BACKEND_PORT:-8080}` → container port 8000. Health-checked via
+  `GET /api/health`.
+- `frontend` (`email-sender-frontend`) — Next.js, published on
+  `${FRONTEND_PORT:-3000}`. Waits for backend health before starting.
 
-### `nginx-prod` profile containers:
-- `backend-nginx` - Backend FastAPI service (internal only)
-  - Internal port: 8000
-- `frontend-nginx` - Frontend React SPA (internal only)
-  - Internal port: 80
-- `nginx` - Nginx reverse proxy
-  - Exposed on: `${NGINX_PORT}:80`
-  - Routes `/email_sender/` → frontend
-  - Routes `/email_sender/api/` → backend
-
-## Architecture Notes
-
-### How Relative URLs Work
-Both profiles use relative URLs (`/email_sender/api`) instead of absolute URLs:
-- Browser requests assets from the same origin it loaded from
-- No hardcoded IP addresses or ports in the built containers
-- Same container images work in any environment (dev, staging, prod)
-
-### CORS Configuration
-- Backend configured with `ALLOWED_ORIGIN_URLS: all`
-- Safe because nginx acts as the single entry point
-- All external requests go through nginx proxy
-- Backend containers are not directly exposed to the internet
-
-### Docker Networking
-- All containers communicate via the `app-network` bridge network
-- Containers reference each other by service name (e.g., `backend-nginx:8000`)
-- Only nginx port is exposed to the host machine
+Both are also reachable inside the `edge` network by their container name
+(`email-sender-backend`, `email-sender-frontend`), which is how Caddy
+routes to them.
 
 ## Troubleshooting
 
-### If you get 404 errors on API calls:
+### CORS errors
+- Confirm `ALLOWED_ORIGIN_URLS` includes the exact origin the browser is
+  loading the frontend from (scheme + host + port).
+- Behind Caddy, this must be the public `https://` origin, not `localhost`.
+
+### Frontend calling the wrong backend URL
+- `NEXT_PUBLIC_BACKEND_URL` is compiled into the frontend at **build**
+  time. After changing it, rebuild: `docker compose up --build -d frontend`.
+
+### `edge` network not found
 ```bash
-# Rebuild the frontend with --no-cache
-docker-compose --profile prod build --no-cache frontend
-docker-compose --profile prod up -d
+docker network create edge
 ```
+Then re-run `docker compose up -d`. Caddy must also be attached to this
+same network to route traffic to the containers.
 
-### If you get CORS errors:
-- Check that you're accessing through the nginx proxy
-- Verify nginx is routing correctly: `docker logs nginx-proxy`
-- Ensure backend CORS is set to `all`
-
-### To view logs:
+### To rebuild everything
 ```bash
-# All services
-docker-compose --profile prod logs -f
-
-# Specific service
-docker logs frontend
-docker logs backend
-docker logs nginx-proxy
-```
-
-### To rebuild everything:
-```bash
-docker-compose --profile prod down
-docker-compose --profile prod build --no-cache
-docker-compose --profile prod up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 ```

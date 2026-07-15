@@ -55,17 +55,17 @@ FRONTEND_PORT=3000
 BACKEND_PORT=8080
 
 # Server IP for external access
-IP_ADDR=localhost
+LOCAL_HOST=localhost
 ```
 
-**For production**, set `IP_ADDR` to your server's public IP or domain name.
+**For production**, set `LOCAL_HOST` to your server's public IP or domain name.
 
 ### CORS Configuration
 
 The backend automatically allows:
 - `http://localhost:3000`
 - `http://127.0.0.1:3000`
-- `http://${IP_ADDR}:${FRONTEND_PORT}`
+- `http://${LOCAL_HOST}:${FRONTEND_PORT}`
 
 ## Usage
 
@@ -192,7 +192,7 @@ docker compose up -d
 ### CORS errors
 
 Make sure:
-1. `.env` file exists with correct `IP_ADDR`
+1. `.env` file exists with correct `LOCAL_HOST`
 2. Access frontend via the configured address
 3. Backend is running and healthy: `curl http://localhost:8080/api/health`
 
@@ -210,9 +210,9 @@ Both services should be on the same network.
 
 For production servers:
 
-1. **Set IP_ADDR:**
+1. **Set LOCAL_HOST:**
    ```env
-   IP_ADDR=your-server-ip.com
+   LOCAL_HOST=your-server-ip.com
    ```
 
 2. **Use HTTPS (recommended):**

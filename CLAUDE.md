@@ -77,7 +77,7 @@ Root `.env`:
 ```env
 FRONTEND_PORT=3000
 BACKEND_PORT=8080
-IP_ADDR=localhost
+LOCAL_HOST=localhost
 ```
 
 Backend `backend/.env`:
